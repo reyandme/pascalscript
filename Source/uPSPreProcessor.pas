@@ -13,13 +13,13 @@ type
   TPSPreProcessor = class;
   TPSPascalPreProcessorParser = class;
 
-  TPSOnNeedFile = function (Sender: TPSPreProcessor; const callingfilename: tbtstring; var FileName, Output: tbtstring): Boolean;
+  TPSOnNeedFile = function (Sender: TPSPreProcessor; const callingfilename: tbtstring; var FileName, Output: tbtstring): Boolean of object;
   TPSOnProcessDirective = procedure (
                             Sender: TPSPreProcessor;
                             Parser: TPSPascalPreProcessorParser;
                             const Active: Boolean;
                             const DirectiveName, DirectiveParam: tbtString;
-                            Var Continue: Boolean); //- jgv - application set continue to false to stop the normal directive processing
+                            Var Continue: Boolean) of object; //- jgv - application set continue to false to stop the normal directive processing
   
   TPSLineInfo = class(TObject)
   private
