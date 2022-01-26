@@ -632,27 +632,27 @@ begin
           begin
             if FDefineState.DoWrite then
             begin
-              if pos(' ', s) <> 0 then raise EPSPreProcessor.CreateFmt(RPS_DefineTooManyParameters, [FileName, Parser.Row, Parser.Col]);
+              if pos(' ', s) <> 0 then raise EPSPreProcessor.CreateFmt(RPS_DefineTooManyParameters, [ExtractFileName(FileName), Parser.Row, Parser.Col]);
               FCurrentDefines.Add(Uppercase(S));
             end;
           end else if (Name = 'UNDEF') then
           begin
             if FDefineState.DoWrite then
             begin
-              if pos(' ', s) <> 0 then raise EPSPreProcessor.CreateFmt(RPS_DefineTooManyParameters, [FileName, Parser.Row, Parser.Col]);
+              if pos(' ', s) <> 0 then raise EPSPreProcessor.CreateFmt(RPS_DefineTooManyParameters, [ExtractFileName(FileName), Parser.Row, Parser.Col]);
               i := FCurrentDefines.IndexOf(Uppercase(s));
               if i <> -1 then
                 FCurrentDefines.Delete(i);
             end;
           end else if (Name = 'IFDEF') then
           begin
-            if pos(' ', s) <> 0 then raise EPSPreProcessor.CreateFmt(RPS_DefineTooManyParameters, [FileName, Parser.Row, Parser.Col]);
+            if pos(' ', s) <> 0 then raise EPSPreProcessor.CreateFmt(RPS_DefineTooManyParameters, [ExtractFileName(FileName), Parser.Row, Parser.Col]);
             //JeromeWelsh - nesting fix
             ADoWrite := (FCurrentDefines.IndexOf(Uppercase(s)) >= 0) and FDefineState.DoWrite;
             FDefineState.Add.DoWrite := ADoWrite;
           end else if (Name = 'IFNDEF') then
           begin
-            if pos(' ', s) <> 0 then raise EPSPreProcessor.CreateFmt(RPS_DefineTooManyParameters, [FileName, Parser.Row, Parser.Col]);
+            if pos(' ', s) <> 0 then raise EPSPreProcessor.CreateFmt(RPS_DefineTooManyParameters, [ExtractFileName(FileName), Parser.Row, Parser.Col]);
             //JeromeWelsh - nesting fix
             ADoWrite := (FCurrentDefines.IndexOf(Uppercase(s)) < 0) and FDefineState.DoWrite;
             FDefineState.Add.DoWrite := ADoWrite;
@@ -661,16 +661,16 @@ begin
             //- jgv remove - borland use it (sysutils.pas)
             //- if s <> '' then raise EPSPreProcessor.CreateFmt(RPS_DefineTooManyParameters, [Parser.Row, Parser.Col]);
             if FDefineState.Count = 0 then
-              raise EPSPreProcessor.CreateFmt(RPS_NoIfdefForEndif, [FileName, Parser.Row, Parser.Col]);
+              raise EPSPreProcessor.CreateFmt(RPS_NoIfdefForEndif, [ExtractFileName(FileName), Parser.Row, Parser.Col]);
             FDefineState.Delete(FDefineState.Count -1); // remove define from list
           end else if (Name = 'ELSE') then
           begin
-            if s<> '' then raise EPSPreProcessor.CreateFmt(RPS_DefineTooManyParameters, [FileName, Parser.Row, Parser.Col]);
+            if s<> '' then raise EPSPreProcessor.CreateFmt(RPS_DefineTooManyParameters, [ExtractFileName(FileName), Parser.Row, Parser.Col]);
             if FDefineState.Count = 0 then
-              raise EPSPreProcessor.CreateFmt(RPS_NoIfdefForElse, [FileName, Parser.Row, Parser.Col]);
+              raise EPSPreProcessor.CreateFmt(RPS_NoIfdefForElse, [ExtractFileName(FileName), Parser.Row, Parser.Col]);
             ds := FDefineState[FDefineState.Count -1];
             if ds.InElse then
-              raise EPSPreProcessor.CreateFmt(RPS_ElseTwice, [FileName, Parser.Row, Parser.Col]);
+              raise EPSPreProcessor.CreateFmt(RPS_ElseTwice, [ExtractFileName(FileName), Parser.Row, Parser.Col]);
             ds.FInElse := True;
             //JeromeWelsh - nesting fix
             ds.DoWrite := not ds.DoWrite and FDefineState.DoPrevWrite;
@@ -684,7 +684,7 @@ begin
             If AppContinue then
             //-- end jgv
           
-              raise EPSPreProcessor.CreateFmt(RPS_UnknownCompilerDirective, [FileName, Parser.Row, Parser.Col]);
+              raise EPSPreProcessor.CreateFmt(RPS_UnknownCompilerDirective, [ExtractFileName(FileName), Parser.Row, Parser.Col]);
           end;
       end;
 
