@@ -1,6 +1,8 @@
 
 unit uPSPreProcessor;
 {$I PascalScript.inc}
+{$WARN IMPLICIT_STRING_CAST OFF}
+{$WARN IMPLICIT_STRING_CAST_LOSS OFF} //Turn off W1057 and W1058 warnings. We assume remObject PascalScript should be aware of them
 
 interface
 uses
