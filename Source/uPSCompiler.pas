@@ -11759,6 +11759,7 @@ var
       result := true;
       exit;
     end;
+    Result := True;
     for i := 0 to FProcs.Count -1 do
     begin
       p := FProcs[I];
@@ -11767,11 +11768,10 @@ var
         if not FOnExportCheck(Self, TPSInternalProcedure(p), MakeDecl(TPSInternalProcedure(p).Decl)) then
         begin
           Result := false;
-          exit;
+          // Do not exit immediately. Apply OnExportCheck on all procedures even if 1st fail the check
         end;
       end;
     end;
-    Result := True;
   end;
   function DoConstBlock: Boolean;
   var
