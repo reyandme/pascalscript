@@ -905,6 +905,10 @@ type
 
   TPSOnExportCheck = function(Sender: TPSPascalCompiler; Proc: TPSInternalProcedure; const ProcDecl: tbtString): Boolean;
 
+  TPSOnAddType = procedure(Sender: TPSPascalCompiler; var aType: TPSType);
+
+  TPSOnAddGlobalVar = procedure(Sender: TPSPascalCompiler; var aGlobalVar: TPSVar);
+
   {$IFNDEF PS_USESSUPPORT}
   TPSOnWriteLineEvent = function (Sender: TPSPascalCompiler; Position: Cardinal): Boolean;
   TPSOnWriteLine2Event = function (Sender: TPSPascalCompiler; Position: Cardinal; IsProcExit: Boolean): Boolean;
@@ -962,6 +966,8 @@ type
     FOnFunctionStart: TPSOnFunction;
     FOnFunctionEnd: TPSOnFunction;
     FAttributesOpenTokenID, FAttributesCloseTokenID: TPsPasToken;
+    FOnAddType: TPSOnAddType;
+    FOnAddGlobalVar: TPSOnAddGlobalVar;
 
 		FWithCount: Integer;
 		FTryCount: Integer;
@@ -1197,6 +1203,10 @@ type
     property OnFunctionStart: TPSOnFunction read FOnFunctionStart write FOnFunctionStart;
 
     property OnFunctionEnd: TPSOnFunction read FOnFunctionEnd write FOnFunctionEnd;
+
+    property OnAddType: TPSOnAddType read FOnAddType write FOnAddType;
+
+    property OnAddGlobalVar: TPSOnAddGlobalVar read FOnAddGlobalVar write FOnAddGlobalVar;
 	
     property IsUnit: Boolean read FIsUnit;
 	
@@ -2373,6 +2383,8 @@ begin
   x.DeclarePos := InvalidVal;
   x.DeclareCol := 0;
   x.DeclareRow := 0;
+  if Assigned(FOnAddType) then
+    FOnAddType(Self, x);
   FTypes.Add(x);
   Result := at2ut(x);
 end;
@@ -2448,6 +2460,8 @@ begin
   Result.DeclarePos := InvalidVal;
   Result.DeclareCol := 0;
   Result.DeclareRow := 0;
+  if Assigned(FOnAddType) then
+    FOnAddType(Self, Result);
   FTypes.Add(Result);
 end;
 
@@ -3827,6 +3841,8 @@ begin
     VCType.DeclareRow := FParser.Row;
     VCType.DeclareCol := FParser.Col;
     TPSProceduralType(VCType).ProcDef.Assign(Decl);
+    if Assigned(FOnAddType) then
+      FOnAddType(Self, VCType);
     FTypes.Add(VCType);
     Result := VCType;
   finally
@@ -3892,6 +3908,8 @@ begin
       p2.DeclareRow := FParser.Row;
       p2.DeclareCol := FParser.Col;
       TPSSetType(p2).SetType := TypeNo;
+      if Assigned(FOnAddType) then
+        FOnAddType(Self, p2);
       FTypes.Add(p2);
       Result := p2;
     end else
@@ -3914,6 +3932,8 @@ begin
     p2.DeclarePos := FParser.CurrTokenPos;
     p2.DeclareRow := FParser.Row;
     p2.DeclareCol := FParser.Col;
+    if Assigned(FOnAddType) then
+      FOnAddType(Self, p2);
     FTypes.Add(p2);
 
     repeat
@@ -4102,6 +4122,8 @@ begin
     p.DeclareRow := FParser.Row;
     p.DeclareCol := FParser.Col;
     TPSArrayType(p).ArrayTypeNo := TypeNo;
+    if Assigned(FOnAddType) then
+      FOnAddType(Self, p);
     FTypes.Add(p);
     Result := p;
     Exit;
@@ -4197,6 +4219,8 @@ begin
       rvv.Free;
     end;
     RecSubVals.Free;
+    if Assigned(FOnAddType) then
+      FOnAddType(Self, p);
     FTypes.Add(p);
     Result := p;
     Exit;
@@ -4323,6 +4347,8 @@ begin
       p.DeclareRow := FParser.Row;
       p.DeclareCol := FParser.Col;
       TPSTypeLink(p).LinkTypeNo := TypeNo;
+      if Assigned(FOnAddType) then
+        FOnAddType(Self, p);
       FTypes.Add(p);
       Result := p;
       Exit;
@@ -4512,6 +4538,8 @@ begin
         v.DeclareRow := ERow;
         v.DeclareCol := ECol;
         v.FType := VarType;
+        if Assigned(FOnAddGlobalVar) then
+          FOnAddGlobalVar(Self, v);
         FVars.Add(v);
       end
       else
@@ -13348,6 +13376,8 @@ begin
   p.Name := s;
   p.FType := AT2UT(FType);
   p.exportname := p.Name;
+  if Assigned(FOnAddGlobalVar) then
+    FOnAddGlobalVar(Self, p);
   FVars.Add(p);
   Result := P;
 end;
