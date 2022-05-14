@@ -15,7 +15,7 @@ type
   TPSPreProcessor = class;
   TPSPascalPreProcessorParser = class;
 
-  TPSOnNeedFile = function (Sender: TPSPreProcessor; const callingfilename: tbtstring; var FileName, Output: tbtstring): Boolean of object;
+  TPSOnNeedFile = function (Sender: TPSPreProcessor; const callingfilename: tbtunicodestring; var FileName: tbtunicodestring; var Output: tbtstring): Boolean of object;
   TPSOnProcessDirective = procedure (
                             Sender: TPSPreProcessor;
                             Parser: TPSPascalPreProcessorParser;
@@ -96,12 +96,12 @@ type
     FAddedPosition: Cardinal;
     FDefineState: TPSDefineStates;
     FMaxLevel: Longint;
-    FMainFileName: tbtstring;
+    FMainFileName: tbtunicodestring;
     FMainFile: tbtstring;
     FOnProcessDirective: TPSOnProcessDirective;
     FOnProcessUnknowDirective: TPSOnProcessDirective;
     procedure ParserNewLine(Sender: TPSPascalPreProcessorParser; Row, Col, Pos: Cardinal);
-    procedure IntPreProcess(Level: Integer; const OrgFileName: tbtstring; FileName: tbtstring; Dest: TStream);
+    procedure IntPreProcess(Level: Integer; const OrgFileName: tbtunicodestring; FileName: tbtunicodestring; Dest: TStream);
   protected
     procedure doAddStdPredefines; virtual; // jgv
   public
@@ -115,14 +115,14 @@ type
 
     property MainFile: tbtstring read FMainFile write FMainFile;
 
-    property MainFileName: tbtstring read FMainFileName write FMainFileName;
+    property MainFileName: tbtunicodestring read FMainFileName write FMainFileName;
 
     property ID: Pointer read FID write FID;
 
     procedure AdjustMessages(Comp: TPSPascalCompiler);
     procedure AdjustMessage(Msg: TPSPascalCompilerMessage); //-jgv
 
-    procedure PreProcess(const Filename: tbtstring; var Output: tbtstring);
+    procedure PreProcess(const Filename: tbtunicodestring; var Output: tbtstring);
 
     procedure Clear;
 
@@ -559,7 +559,7 @@ begin
   {$ENDIF }
 end;
 
-procedure TPSPreProcessor.IntPreProcess(Level: Integer; const OrgFileName: tbtstring; FileName: tbtstring; Dest: TStream);
+procedure TPSPreProcessor.IntPreProcess(Level: Integer; const OrgFileName: tbtunicodestring; FileName: tbtunicodestring; Dest: TStream);
 var
   Parser: TPSPascalPreProcessorParser;
   dta: tbtstring;
@@ -713,7 +713,7 @@ begin
   end;
 end;
 
-procedure TPSPreProcessor.PreProcess(const Filename: tbtstring; var Output: tbtstring);
+procedure TPSPreProcessor.PreProcess(const Filename: tbtunicodestring; var Output: tbtstring);
 var
   Stream: TMemoryStream;
 begin
