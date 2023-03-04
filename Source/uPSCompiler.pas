@@ -339,12 +339,17 @@ type
     property LinkTypeNo: TPSType read FLinkTypeNo write FLinkTypeNo;
   end;
 
+
+  TKMPSEnumSize = (esByte, esWord, esCardinal);
+
   TPSEnumType = class(TPSType)
   private
     FHighValue: Cardinal;
+    FEnumSize: TKMPSEnumSize;
+    procedure SetHighValue(const aHighValue: Cardinal);
   public
-
-    property HighValue: Cardinal read FHighValue write FHighValue;
+    property EnumSize: TKMPSEnumSize read FEnumSize write FEnumSize;
+    property HighValue: Cardinal read FHighValue write SetHighValue;
   end;
 
 
@@ -989,6 +994,8 @@ type
 
     FCurrUsedTypeNo: Cardinal;
     FGlobalBlock: TPSBlockInfo;
+
+    FSkipMessage: Boolean; // Should we skip making error message?
 
     function IsBoolean(aType: TPSType): Boolean;
     {$IFNDEF PS_NOWIDESTRING}
@@ -2606,6 +2613,8 @@ function TPSPascalCompiler.MakeHint(const Module: tbtString; E: TPSPascalCompile
 var
   n: TPSPascalCompilerHint;
 begin
+  if FSkipMessage then Exit(nil);
+
   N := TPSPascalCompilerHint.Create;
   n.FHint := e;
   n.SetParserPos(FParser);
@@ -2620,6 +2629,8 @@ function TPSPascalCompiler.MakeError(const Module: tbtString; E:
 var
   n: TPSPascalCompilerError;
 begin
+  if FSkipMessage then Exit(nil);
+
   N := TPSPascalCompilerError.Create;
   n.FError := e;
   n.SetParserPos(FParser);
@@ -2641,6 +2652,8 @@ function TPSPascalCompiler.MakeWarning(const Module: tbtString; E:
 var
   n: TPSPascalCompilerWarning;
 begin
+  if FSkipMessage then Exit(nil);
+
   N := TPSPascalCompilerWarning.Create;
   n.FWarning := e;
   n.SetParserPos(FParser);
@@ -3163,9 +3176,9 @@ begin
     (((p1.basetype = btPchar) or (p1.BaseType = btString)) and (p2.BaseType = btchar)) or
     {$ENDIF}
     ((p1.BaseType = btRecord) and (p2.BaseType = btrecord) and (not IsVarInCompatible(p1, p2))) or
-    ((p1.BaseType = btEnum) and (p2.BaseType = btEnum)) or
-    (Cast and IsIntType(P1.BaseType) and (p2.baseType = btEnum)) or
-    (Cast and (p1.baseType = btEnum) and IsIntType(P2.BaseType))
+    ((p1.BaseType = btEnum) and (p2.BaseType = btEnum) and (p1.Name = p2.Name)) or // Only enums with the same could be compatible
+    ({Cast and }IsIntType(P1.BaseType) and (p2.baseType = btEnum)) or // No Cast needed - treat enums as integers, thus they should be compatible with them
+    ({Cast and }(p1.baseType = btEnum) and IsIntType(P2.BaseType))
     then
     Result := True
   // nx change start - allow casting class -> integer and vice versa
@@ -3853,11 +3866,23 @@ end; {ReadTypeAddProcedure}
 
 function TPSPascalCompiler.ReadType(const Name: tbtString; FParser: TPSPascalParser): TPSType; // InvalidVal = Invalid
 var
+  VarType: TPSType;
+  FArrayStart, FArrayLength: Longint;
+
+  function SetArrayAsEnumType: Boolean;
+  begin
+    if VarType.BaseType <> btEnum then Exit(False);
+
+    FArrayStart := 0;
+    FArrayLength := TPSEnumType(VarType).HighValue + 1;
+    Result := True;
+  end;
+
+var
   TypeNo: TPSType;
   h, l: Longint;
   FieldName,fieldorgname,s: tbtString;
   RecSubVals: TPSList;
-  FArrayStart, FArrayLength: Longint;
   rvv: PIFPSRecordFieldTypeDef;
   p, p2: TPSType;
   tempf: PIfRVariant;
@@ -3986,62 +4011,90 @@ begin
     if FParser.CurrTokenID = CSTI_OpenBlock then
     begin
       FParser.Next;
-      tempf := ReadConstant(FParser, CSTI_TwoDots);
-      if tempf = nil then
+
+      // Skip making error while reading type, since we can read here a constant value
+      FSkipMessage := True;
+      // Try to read next Identifier as a type
+      // Parse `array[TKMWareType] of ...`
+      VarType := ReadType('', FParser);
+      FSkipMessage := False;
+      if (VarType = nil) or not SetArrayAsEnumType then
       begin
-        Result := nil;
-        exit;
-      end;
-      case tempf.FType.BaseType of
-        btU8: FArrayStart := tempf.tu8;
-        btS8: FArrayStart := tempf.ts8;
-        btU16: FArrayStart := tempf.tu16;
-        btS16: FArrayStart := tempf.ts16;
-        btU32: FArrayStart := tempf.tu32;
-        btS32: FArrayStart := tempf.ts32;
-        {$IFNDEF PS_NOINT64}
-        bts64: FArrayStart := tempf.ts64;
-        {$ENDIF}
-      else
+        // Parse `array[const..const] of ...`
+        tempf := ReadConstant(FParser, CSTI_TwoDots);
+        if tempf = nil then
         begin
+          Result := nil;
+          exit;
+        end;
+        case tempf.FType.BaseType of
+          btU8: FArrayStart := tempf.tu8;
+          btS8: FArrayStart := tempf.ts8;
+          btU16: FArrayStart := tempf.tu16;
+          btS16: FArrayStart := tempf.ts16;
+          btU32: FArrayStart := tempf.tu32;
+          btS32: FArrayStart := tempf.ts32;
+          // Parse `array[wtTrunk ...`
+          btEnum: case TPSEnumType(tempf.FType).EnumSize of
+                    esByte:     FArrayStart := tempf.tu8;
+                    esWord:     FArrayStart := tempf.tu16;
+                    esCardinal: FArrayStart := tempf.tu32;
+                    else
+                      raise Exception.Create('Unexpected EnumSize');
+                  end;
+          {$IFNDEF PS_NOINT64}
+          bts64: FArrayStart := tempf.ts64;
+          {$ENDIF}
+        else
+          begin
+            DisposeVariant(tempf);
+            MakeError('', ecTypeMismatch, '');
+            Result := nil;
+            exit;
+          end;
+        end;
+        DisposeVariant(tempf);
+        if FParser.CurrTokenID <> CSTI_TwoDots then
+        begin
+          MakeError('', ecPeriodExpected, '');
+          Result := nil;
+          exit;
+        end;
+        FParser.Next;
+        tempf := ReadConstant(FParser, CSTI_CloseBlock);
+        if tempf = nil then
+        begin
+          Result := nil;
+          exit;
+        end;
+        case tempf.FType.BaseType of
+          btU8: FArrayLength := tempf.tu8;
+          btS8: FArrayLength := tempf.ts8;
+          btU16: FArrayLength := tempf.tu16;
+          btS16: FArrayLength := tempf.ts16;
+          btU32: FArrayLength := tempf.tu32;
+          btS32: FArrayLength := tempf.ts32;
+          // Parse `array[wtTrunk..wtStone] ...`
+          btEnum: case TPSEnumType(tempf.FType).EnumSize of
+                    esByte:     FArrayLength := tempf.tu8;
+                    esWord:     FArrayLength := tempf.tu16;
+                    esCardinal: FArrayLength := tempf.tu32;
+                    else
+                      raise Exception.Create('Unexpected EnumSize');
+                  end;
+          {$IFNDEF PS_NOINT64}
+          bts64: FArrayLength := tempf.ts64;
+          {$ENDIF}
+        else
           DisposeVariant(tempf);
           MakeError('', ecTypeMismatch, '');
           Result := nil;
           exit;
         end;
-      end;
-      DisposeVariant(tempf);
-      if FParser.CurrTokenID <> CSTI_TwoDots then
-      begin
-        MakeError('', ecPeriodExpected, '');
-        Result := nil;
-        exit;
-      end;
-      FParser.Next;
-      tempf := ReadConstant(FParser, CSTI_CloseBlock);
-      if tempf = nil then
-      begin
-        Result := nil;
-        exit;
-      end;
-      case tempf.FType.BaseType of
-        btU8: FArrayLength := tempf.tu8;
-        btS8: FArrayLength := tempf.ts8;
-        btU16: FArrayLength := tempf.tu16;
-        btS16: FArrayLength := tempf.ts16;
-        btU32: FArrayLength := tempf.tu32;
-        btS32: FArrayLength := tempf.ts32;
-        {$IFNDEF PS_NOINT64}
-        bts64: FArrayLength := tempf.ts64;
-        {$ENDIF}
-      else
         DisposeVariant(tempf);
-        MakeError('', ecTypeMismatch, '');
-        Result := nil;
-        exit;
+        FArrayLength := FArrayLength - FArrayStart + 1;
       end;
-      DisposeVariant(tempf);
-      FArrayLength := FArrayLength - FArrayStart + 1;
+
       if (FArrayLength < 0) or (FArrayLength > MaxInt div 4) then
       begin
         MakeError('', ecTypeMismatch, '');
@@ -8292,6 +8345,11 @@ function TPSPascalCompiler.ProcessSub(BlockInfo: TPSBlockInfo): Boolean;
               Result := t2
             else if ((t1.BaseType = btSet) and (t2.BaseType = btSet)) and (t1 = t2) then
               Result := t1
+            // Allow `WT := wtTrunk + 3`
+            else if (t1.BaseType = btEnum) and IsIntType(t2.BaseType) then
+              Result := t1
+            else if (t2.BaseType = btEnum) and IsIntType(t1.BaseType) then
+              Result := t2
             else if IsIntType(t1.BaseType) and IsIntType(t2.BaseType) then
               Result := t1
             else if IsIntRealType(t1.BaseType) and
@@ -8364,6 +8422,11 @@ function TPSPascalCompiler.ProcessSub(BlockInfo: TPSBlockInfo): Boolean;
                 result := nil;
 {$ENDIF}
             end
+            // Allow `WT := wtFish - 3`
+            else if (Cmd = otSub) and (t1.BaseType = btEnum) and IsIntType(t2.BaseType) then
+              Result := t1
+            else if (Cmd = otSub) and (t2.BaseType = btEnum) and IsIntType(t1.BaseType) then
+              Result := t2
             else
               Result := nil;
           end;
@@ -13991,6 +14054,20 @@ procedure TPSInternalProcedure.Use;
 begin
   FUsed := True;
 end;
+
+
+procedure TPSEnumType.SetHighValue(const aHighValue: Cardinal);
+begin
+  FHighValue := aHighValue;
+
+  if FHighValue <= 256 then
+    FEnumSize := esByte
+  else if FHighValue <= 65536 then
+    FEnumSize := esWord
+  else
+    FEnumSize := esCardinal;
+end;
+
 
 { TPSProcedure }
 constructor TPSProcedure.Create;
