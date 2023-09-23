@@ -3432,6 +3432,7 @@ begin
             btU32: b := var1^.tu32 >= GetUint(Var2, Result);
             btS32: b := var1^.ts32 >= Getint(Var2, Result);
             {$IFNDEF PS_NOINT64}btS64: b := var1^.ts64 >= GetInt64(Var2, Result); {$ENDIF}
+            btEnum: b := var1^.ts32 >= Getint(Var2, Result);
             btSingle: b := var1^.tsingle >= GetReal( Var2, Result);
             btDouble: b := var1^.tdouble >= GetReal( Var2, Result);
             btExtended: b := var1^.textended >= GetReal( Var2, Result);
@@ -3458,6 +3459,7 @@ begin
             btU32: b := var1^.tu32 <= GetUint(Var2, Result);
             btS32: b := var1^.ts32 <= Getint(Var2, Result);
             {$IFNDEF PS_NOINT64}btS64: b := var1^.ts64 <= GetInt64(Var2, Result); {$ENDIF}
+            btEnum: b := var1^.ts32 <= Getint(Var2, Result);
             btSingle: b := var1^.tsingle <= GetReal( Var2, Result);
             btDouble: b := var1^.tdouble <= GetReal( Var2, Result);
             btExtended: b := var1^.textended <= GetReal( Var2, Result);
@@ -3484,6 +3486,7 @@ begin
             btU32: b := var1^.tu32 > GetUint(Var2, Result);
             btS32: b := var1^.ts32 > Getint(Var2, Result);
             {$IFNDEF PS_NOINT64}btS64: b := var1^.ts64 > GetInt64(Var2, Result); {$ENDIF}
+            btEnum: b := var1^.ts32 > Getint(Var2, Result);
             btSingle: b := var1^.tsingle > GetReal( Var2, Result);
             btDouble: b := var1^.tdouble > GetReal( Var2, Result);
             btExtended: b := var1^.textended > GetReal( Var2, Result);
@@ -3503,6 +3506,7 @@ begin
             btU32: b := var1^.tu32 < GetUint(Var2, Result);
             btS32: b := var1^.ts32 < Getint(Var2, Result);
             {$IFNDEF PS_NOINT64}btS64: b := var1^.ts64 < GetInt64(Var2, Result); {$ENDIF}
+            btEnum: b := var1^.ts32 < Getint(Var2, Result);
             btSingle: b := var1^.tsingle < GetReal( Var2, Result);
             btDouble: b := var1^.tdouble < GetReal( Var2, Result);
             btExtended: b := var1^.textended < GetReal( Var2, Result);
@@ -8578,6 +8582,8 @@ function TPSPascalCompiler.ProcessSub(BlockInfo: TPSBlockInfo): Boolean;
               Result := FDefaultBoolType
             else if IsIntRealType(t1.BaseType) and
               IsIntRealType(t2.BaseType) then
+              Result := FDefaultBoolType
+            else if (t1.BaseType = btEnum) and (t2.BaseType = btEnum) and (t1 = t2) then
               Result := FDefaultBoolType
             else if
             ((t1.BaseType = btString) or (t1.BaseType = btChar) {$IFNDEF PS_NOWIDESTRING} or (t1.BaseType = btWideString) or (t1.BaseType = btWideChar) or (t1.BaseType = btUnicodestring){$ENDIF}) and
