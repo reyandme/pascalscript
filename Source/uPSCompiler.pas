@@ -2767,7 +2767,7 @@ end;
 function IsIntType(b: TPSBaseType): Boolean;
 begin
   case b of
-    btU8, btS8, btU16, btS16, btU32, btS32{$IFNDEF PS_NOINT64}, btS64{$ENDIF}: Result := True;
+    btU8, btS8, btU16, btS16, btU32, btS32{$IFNDEF PS_NOINT64}, btS64{$ENDIF}, btEnum: Result := True;
   else
     Result := False;
   end;
