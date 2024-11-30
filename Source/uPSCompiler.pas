@@ -1055,7 +1055,7 @@ type
     procedure Debug_WriteLine(BlockInfo: TPSBlockInfo);
     procedure Debug_WriteLine2(BlockInfo: TPSBlockInfo; IsProcExit: Boolean);
 
-    function IsCompatibleType(p1, p2: TPSType; Cast: Boolean): Boolean;
+    function IsCompatibleType(p1, p2: TPSType; Cast: Boolean; aEnumAsInt: Boolean = False): Boolean;
 
     function IsDuplicate(const s: tbtString; const check: TPSDuplicCheck): Boolean;
     {$IFDEF PS_USESSUPPORT}
@@ -3166,7 +3166,8 @@ begin
 end;
 
 
-function TPSPascalCompiler.IsCompatibleType(p1, p2: TPSType; Cast: Boolean): Boolean;
+// aEnumAsInt - flag if we consider enum as an Integer type
+function TPSPascalCompiler.IsCompatibleType(p1, p2: TPSType; Cast: Boolean; aEnumAsInt: Boolean = False): Boolean;
 begin
   if
     ((p1.BaseType = btProcPtr) and (p2 = p1)) or
@@ -3200,8 +3201,8 @@ begin
     {$ENDIF}
     ((p1.BaseType = btRecord) and (p2.BaseType = btrecord) and (not IsVarInCompatible(p1, p2))) or
     ((p1.BaseType = btEnum) and (p2.BaseType = btEnum) and (p1.Name = p2.Name)) or // Only enums with the same could be compatible
-    ({Cast and }IsIntType(P1.BaseType) and (p2.baseType = btEnum)) or // No Cast needed - treat enums as integers, thus they should be compatible with them
-    ({Cast and }(p1.baseType = btEnum) and IsIntType(P2.BaseType))
+    ((Cast or aEnumAsInt) and IsIntType(P1.BaseType) and (p2.baseType = btEnum)) or // no enum strict flag
+    ((Cast or aEnumAsInt) and (p1.baseType = btEnum) and IsIntType(P2.BaseType))
     then
     Result := True
   // nx change start - allow casting class -> integer and vice versa
@@ -5686,7 +5687,7 @@ function TPSPascalCompiler.ProcessSub(BlockInfo: TPSBlockInfo): Boolean;
   function WriteOutRec(x: TPSValue; AllowData: Boolean): Boolean; forward;
   procedure AfterWriteOutRec(var x: TPSValue); forward;
 
-  function CheckCompatType(V1, v2: TPSValue): Boolean;
+  function CheckCompatType(V1, v2: TPSValue; aEnumAsInt: Boolean = False): Boolean;
   var
     p1, P2: TPSType;
   begin
@@ -5727,7 +5728,7 @@ function TPSPascalCompiler.ProcessSub(BlockInfo: TPSBlockInfo): Boolean;
     begin
       Result := True;
     end else
-      Result := IsCompatibleType(p1, p2, False);
+      Result := IsCompatibleType(p1, p2, False, aEnumAsInt);
   end;
 
   function _ProcessFunction(ProcCall: TPSValueProc; ResultRegister: TPSValue): Boolean; forward;
@@ -9478,7 +9479,8 @@ begin
       end;
     end;
   begin
-    if not CheckCompatType(Outreg, InData) then
+    // Check enum as Int for `arr[WT]`
+    if not CheckCompatType(Outreg, InData, True) then
     begin
       MakeError('', ecTypeMismatch, '');
       Result := False;
