@@ -340,7 +340,7 @@ type
   end;
 
 
-  TKMPSEnumSize = (esByte, esWord, esCardinal);
+  TKMPSEnumSize = (es8Bit, es16bit, es32bit);
 
   TPSEnumType = class(TPSType)
   private
@@ -4063,9 +4063,9 @@ begin
           btS32: FArrayStart := tempf.ts32;
           // Parse `array[wtTrunk ...`
           btEnum: case TPSEnumType(tempf.FType).EnumSize of
-                    esByte:     FArrayStart := tempf.tu8;
-                    esWord:     FArrayStart := tempf.tu16;
-                    esCardinal: FArrayStart := tempf.tu32;
+                    es8Bit:   FArrayStart := tempf.ts8;
+                    es16bit:  FArrayStart := tempf.ts16;
+                    es32bit:  FArrayStart := tempf.ts32;
                     else
                       raise Exception.Create('Unexpected EnumSize');
                   end;
@@ -4103,9 +4103,9 @@ begin
           btS32: FArrayLength := tempf.ts32;
           // Parse `array[wtTrunk..wtStone] ...`
           btEnum: case TPSEnumType(tempf.FType).EnumSize of
-                    esByte:     FArrayLength := tempf.tu8;
-                    esWord:     FArrayLength := tempf.tu16;
-                    esCardinal: FArrayLength := tempf.tu32;
+                    es8Bit:  FArrayLength := tempf.ts8;
+                    es16bit: FArrayLength := tempf.ts16;
+                    es32bit: FArrayLength := tempf.ts32;
                     else
                       raise Exception.Create('Unexpected EnumSize');
                   end;
