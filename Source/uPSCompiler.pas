@@ -1935,19 +1935,20 @@ begin
       BlockWriteLong(BlockInfo, Length(tbtString(p^.tstring)));
       BlockWriteData(BlockInfo, tbtString(p^.tstring)[1], Length(tbtString(p^.tstring)));
     end;
-     btenum:
-     begin
-       if TPSEnumType(p^.FType).HighValue <=256 then
-      begin
-        du8 := tbtu8(p^.tu32);
-        BlockWriteData(BlockInfo, du8, 1)
-      end
-       else if TPSEnumType(p^.FType).HighValue <=65536 then
-      begin
-        du16 := tbtu16(p^.tu32);
-        BlockWriteData(BlockInfo, du16, 2)
+  btenum:
+    begin
+      case TPSEnumType(p^.FType).EnumSize of
+        es8Bit:   begin
+                    du8 := tbtu8(p^.tu32);
+                    BlockWriteData(BlockInfo, du8, 1);
+                  end;
+        es16Bit:  begin
+                    du16 := tbtu16(p^.tu32);
+                    BlockWriteData(BlockInfo, du16, 2)
+                  end;
       end;
-	end;
+      // No BlockWriteData code for du32 ?
+	  end;
 
   bts8,btu8: BlockWriteData(BlockInfo, p^.tu8, 1);
   bts16,btu16: BlockWriteData(BlockInfo, p^.tu16, 2);
@@ -2877,7 +2878,7 @@ begin
     {$IFNDEF PS_NOWIDESTRING}
     btWideChar: Result := ord(tbtwidechar(src^.twidechar));
     {$ENDIF}
-    btEnum: Result := src^.tu32;
+    btEnum: Result := src^.ts32;
   else
     begin
       s := False;
@@ -2902,7 +2903,7 @@ begin
     {$IFNDEF PS_NOWIDESTRING}
     btWideChar: Result := ord(tbtwidechar(src^.twidechar));
     {$ENDIF}
-    btEnum: Result := src^.tu32;
+    btEnum: Result := src^.ts32;
   else
     begin
       s := False;
@@ -2925,7 +2926,7 @@ begin
     {$IFNDEF PS_NOWIDESTRING}
     btWideChar: Result := ord(tbtwidechar(src^.twidechar));
     {$ENDIF}
-    btEnum: Result := src^.tu32;
+    btEnum: Result := src^.ts32;
   else
     begin
       s := False;
@@ -3242,8 +3243,8 @@ begin
             btS8: var1^.ts8 := var1^.ts8 + GetInt(Var2, Result);
             btU16: var1^.tu16 := var1^.tu16 + GetUint(Var2, Result);
             btS16: var1^.ts16 := var1^.ts16 + Getint(Var2, Result);
-            btEnum, btU32: var1^.tu32 := var1^.tu32 + GetUint(Var2, Result);
-            btS32: var1^.ts32 := var1^.ts32 + Getint(Var2, Result);
+            btU32: var1^.tu32 := var1^.tu32 + GetUint(Var2, Result);
+            btEnum, btS32: var1^.ts32 := var1^.ts32 + Getint(Var2, Result);
             {$IFNDEF PS_NOINT64}btS64: var1^.ts64 := var1^.ts64 + GetInt64(Var2, Result); {$ENDIF}
             btSingle: var1^.tsingle := var1^.tsingle + GetReal( Var2, Result);
             btDouble: var1^.tdouble := var1^.tdouble + GetReal( Var2, Result);
@@ -3279,8 +3280,8 @@ begin
             btS8: var1^.ts8 := var1^.ts8 - Getint(Var2, Result);
             btU16: var1^.tu16 := var1^.tu16 - GetUint(Var2, Result);
             btS16: var1^.ts16 := var1^.ts16 - Getint(Var2, Result);
-            btEnum, btU32: var1^.tu32 := var1^.tu32 - GetUint(Var2, Result);
-            btS32: var1^.ts32 := var1^.ts32 - Getint(Var2, Result);
+            btU32: var1^.tu32 := var1^.tu32 - GetUint(Var2, Result);
+            btEnum, btS32: var1^.ts32 := var1^.ts32 - Getint(Var2, Result);
             {$IFNDEF PS_NOINT64}btS64: var1^.ts64 := var1^.ts64 - GetInt64(Var2, Result); {$ENDIF}
             btSingle: var1^.tsingle := var1^.tsingle - GetReal( Var2, Result);
             btDouble: var1^.tdouble := var1^.tdouble - GetReal(Var2, Result);
@@ -11517,13 +11518,10 @@ var
           WriteData(tbtString(p^.tstring)[1], Length(tbtString(p^.tstring)));
         end;
       btenum:
-        begin
-          if TPSEnumType(p^.FType).HighValue <=256 then
-            WriteData( p^.tu32, 1)
-          else if TPSEnumType(p^.FType).HighValue <=65536 then
-            WriteData(p^.tu32, 2)
-          else
-            WriteData(p^.tu32, 4);
+        case TPSEnumType(p^.FType).EnumSize of
+          es8bit:   WriteData(p^.tu32, 1);
+          es16bit:  WriteData(p^.tu32, 2);
+          es32bit:  WriteData(p^.tu32, 4);
         end;
       bts8,btu8: WriteData(p^.tu8, 1);
       bts16,btu16: WriteData(p^.tu16, 2);
@@ -11597,12 +11595,11 @@ var
             bt := btU32;
           end else
           if (x.BaseType = btEnum) then begin
-            if TPSEnumType(x).HighValue <= 256 then
-              bt := btU8
-            else if TPSEnumType(x).HighValue <= 65536 then
-              bt := btU16
-            else
-              bt := btU32;
+            case TPSEnumType(x).EnumSize of
+              es8bit:   bt := bts8;
+              es16bit:  bt := bts16;
+              es32bit:  bt := bts32;
+            end;
           end;
           if FExportName <> '' then
           begin
@@ -14102,9 +14099,9 @@ procedure TPSEnumType.SetHighValue(const aHighValue: Cardinal);
 begin
   FHighValue := aHighValue;
 
-  if FHighValue <= 256 then
+  if FHighValue < 128 then
     FEnumSize := es8bit
-  else if FHighValue <= 65536 then
+  else if FHighValue < 32768 then
     FEnumSize := es16bit
   else
     FEnumSize := es32bit;
@@ -14184,7 +14181,7 @@ begin
   if (FValue <> nil) then
   begin
     case FValue.FType.BaseType of
-      btEnum: FValue.tu32 := Val;
+      btEnum: FValue.ts32 := Val;
       btU32, btS32: FValue.ts32 := Val;
       btU16, btS16: FValue.ts16 := Val;
       btU8, btS8: FValue.ts8 := Val;
@@ -14272,7 +14269,7 @@ begin
   if (FValue <> nil) then
   begin
     case FValue.FType.BaseType of
-      btEnum: FValue.tu32 := Val;
+      btEnum: FValue.ts32 := Val;
       btU32, btS32: FValue.tu32 := Val;
       btU16, btS16: FValue.tu16 := Val;
       btU8, btS8: FValue.tu8 := Val;

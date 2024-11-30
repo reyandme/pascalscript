@@ -9598,30 +9598,52 @@ function Include_(Caller: TPSExec; p: TPSExternalProcRec; Global, Stack: TPSStac
 var
   TheSet, NewMember: TPSVariantIFC;
   SetData: PByteArray;
-  Val: Tbtu8;
+  valS: Tbts8;
+  valU: Tbtu8;
 begin
   TheSet:=NewTPSVariantIFC(Stack[Stack.Count-1],true);
   NewMember:=NewTPSVariantIFC(Stack[Stack.Count-2],false);
-  Result := (TheSet.aType.BaseType = btSet) and (NewMember.aType.BaseType = btU8);
+  // Enums using unsigned integers, while char and byte sets use btu8
+  Result := (TheSet.aType.BaseType = btSet) and ((NewMember.aType.BaseType = bts8) or (NewMember.aType.BaseType = btu8));
   if not Result then Exit;
   SetData := TheSet.Dta;
-  Val := Tbtu8(NewMember.dta^);
-  SetData^[Val shr 3] := SetData^[Val shr 3] or (1 shl (Val and 7));
+  if (NewMember.aType.BaseType = bts8) then
+  begin
+    valS := Tbts8(NewMember.dta^);
+    SetData^[valS shr 3] := SetData^[valS shr 3] or (1 shl (valS and 7));
+  end
+  else
+  if (NewMember.aType.BaseType = btu8) then
+  begin
+    valU := Tbtu8(NewMember.dta^);
+    SetData^[valU shr 3] := SetData^[valU shr 3] or (1 shl (valU and 7));
+  end;
 end;
 
 function Exclude_(Caller: TPSExec; p: TPSExternalProcRec; Global, Stack: TPSStack): Boolean;
 var
   TheSet, NewMember: TPSVariantIFC;
   SetData: PByteArray;
-  Val: Tbtu8;
+  valS: Tbts8;
+  valU: Tbtu8;
 begin
   TheSet:=NewTPSVariantIFC(Stack[Stack.Count-1],true);
   NewMember:=NewTPSVariantIFC(Stack[Stack.Count-2],false);
-  Result := (TheSet.aType.BaseType = btSet) and (NewMember.aType.BaseType = btU8);
+  Result := (TheSet.aType.BaseType = btSet) and ((NewMember.aType.BaseType = bts8) or (NewMember.aType.BaseType = btu8));
   if not Result then Exit;
   SetData := TheSet.Dta;
-  Val := Tbtu8(NewMember.dta^);
-  SetData^[Val shr 3] := SetData^[Val shr 3] and not (1 shl (Val and 7));
+
+  if (NewMember.aType.BaseType = bts8) then
+  begin
+    valS := Tbts8(NewMember.dta^);
+    SetData^[valS shr 3] := SetData^[valS shr 3] and not (1 shl (valS and 7));
+  end
+  else
+  if (NewMember.aType.BaseType = btu8) then
+  begin
+    valU := Tbtu8(NewMember.dta^);
+    SetData^[valU shr 3] := SetData^[valU shr 3] and not (1 shl (valU and 7));
+  end;
 end;
 
 
