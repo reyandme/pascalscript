@@ -15271,7 +15271,7 @@ end;
 function TPSSetType.GetBitSize: Longint;
 begin
   case SetType.BaseType of
-    btEnum: begin Result := TPSEnumType(setType).HighValue+1; end;
+    btEnum: begin Result := TPSEnumType(setType).HighValue + 1; end;
     btChar, btU8: Result := 256;
   else
     Result := 0;
