@@ -624,6 +624,9 @@ procedure RIRegisterTSTREAM(Cl: TPSRuntimeClassImporter);
 begin
   with Cl.Add(TSTREAM) do
   begin
+    { uPSC_Classes doesn't turn on IsAbstract on Sydney and newer but here we
+      still use RegisterVirtualAbstractMethod because with RegisterVirtualMethod
+      it picks the wrong overload, at least for Seek }
     RegisterVirtualAbstractMethod(TMemoryStream, @TMemoryStream.READ, 'Read');
     RegisterVirtualAbstractMethod(TMemoryStream, @TMemoryStream.WRITE, 'Write');
     RegisterVirtualAbstractMethod(TMemoryStream, @TMemoryStream.SEEK, 'Seek');
@@ -1125,6 +1128,6 @@ begin
   {$ENDIF}
 end;
 
-// PS_MINIVCL changes by Martijn Laan (mlaan at wintax _dot_ nl)
+// PS_MINIVCL changes by Martijn Laan
 
 end.
