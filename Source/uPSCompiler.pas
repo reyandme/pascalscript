@@ -14103,11 +14103,11 @@ begin
   FHighValue := aHighValue;
 
   if FHighValue <= 256 then
-    FEnumSize := esByte
+    FEnumSize := es8bit
   else if FHighValue <= 65536 then
-    FEnumSize := esWord
+    FEnumSize := es16bit
   else
-    FEnumSize := esCardinal;
+    FEnumSize := es32bit;
 end;
 
 
